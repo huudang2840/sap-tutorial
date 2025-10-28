@@ -1,0 +1,19 @@
+### Check stock for SKU-RED (using external service)
+POST http://localhost:4004/odata/v4/order/checkStock
+Content-Type: application/json
+Accept: application/json
+
+{
+  "sku": "SKU-RED"
+}
+
+### Get Order Info with Stock each SKU (mashup local + external)
+POST http://localhost:4004/odata/v4/order/getOrderWithStock
+Content-Type: application/json
+Accept: application/json
+
+{
+  "orderID": "22222222"
+}
+
+

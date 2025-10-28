@@ -12,4 +12,12 @@ service OrderService {
 
   action checkStock(sku : String)
     returns { sku : String; availableQty : Integer; };
+
+  action getOrderWithStock(orderID : UUID)
+    returns {
+      orderID: UUID;
+      customer: String;
+      items: String;
+      stockReport: String;
+    };
 }

@@ -28,6 +28,12 @@
             "roles": []
           }
         }
+      },
+      "stockService": {
+        "kind": "rest",
+        "credentials": {
+          "url": "http://localhost:5000"
+        }
       }
     }
   }

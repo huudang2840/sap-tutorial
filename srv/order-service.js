@@ -2,24 +2,46 @@ const cds = require( '@sap/cds' )
 const {Orders, OrderItems} = cds.entities
 const axios = require( 'axios' )
 
+// Helper function to fetch stock with retry logic
+async function fetchStockWithRetry(baseURL, sku, maxRetry = 2) {
+  for (let attempt = 1; attempt <= maxRetry; attempt++) {
+    try {
+      const resp = await axios.post(`${baseURL}/stock`, { sku })
+      return { ok: true, data: resp.data }
+    } catch (e) {
+      if (attempt === maxRetry) {
+        return {
+          ok: false,
+          data: { sku, availableQty: null }
+        }
+      }
+      await new Promise(r => setTimeout(r, 100))
+    }
+  }
+}
+
 class OrderService extends cds.ApplicationService {
     init () {
 
-        // 1. Validation trước khi CREATE Order
+        // Stock Service Configuration
+        const stockSvcConf = cds.env.requires.stockService
+        const stockBaseURL = stockSvcConf?.credentials?.url
+
+        // 1. Validation before CREATE Order
         this.before( 'CREATE', 'Orders', req => {
             const data = req.data
             if( !data.items || data.items.length === 0 )
             {
-                req.reject( 400, 'Order phải có ít nhất 1 dòng hàng' )
+                req.reject( 400, 'Order must have at least 1 item' )
             }
             for( const it of data.items )
             {
-                if( it.qty <= 0 ) req.reject( 400, 'Số lượng phải > 0' )
+                if( it.qty <= 0 ) req.reject( 400, 'Quantity must be > 0' )
             }
             data.createdAt = new Date().toISOString()
         } )
 
-        // 2. Action submitOrder: tính total từ OrderItems
+        // 2. Action submitOrder: calculate total from OrderItems
         this.on( 'submitOrder', async req => {
             const {orderID} = req.data
             const tx = cds.transaction( req )
@@ -30,7 +52,7 @@ class OrderService extends cds.ApplicationService {
 
             if( !items.length )
             {
-                return {success: false, message: 'Không tìm thấy item cho order'}
+                return {success: false, message: 'No items found for order'}
             }
 
             const total = items.reduce(
@@ -42,7 +64,7 @@ class OrderService extends cds.ApplicationService {
                 UPDATE( Orders ).set( {total} ).where( {ID: orderID} )
             )
 
-            // Emit sự kiện nội bộ (event-driven)
+            // Emit internal event (event-driven)
             await this.emit( 'OrderSubmitted', {
                 orderId: orderID,
                 total
@@ -51,7 +73,7 @@ class OrderService extends cds.ApplicationService {
             return {success: true, message: `Order ${ orderID } total=${ total }`}
         } )
 
-        // 3. Action getHighValueOrders: query DB với CAP SELECT
+        // 3. Action getHighValueOrders: query DB with CAP SELECT
         this.on( 'getHighValueOrders', async req => {
             const {minTotal} = req.data
             const tx = cds.transaction( req )
@@ -61,27 +83,71 @@ class OrderService extends cds.ApplicationService {
             return rows
         } )
 
-        // 4. Action checkStock: gọi external service (mock)
+        // 4. Action checkStock: call external service (mock)
         this.on( 'checkStock', async req => {
             const {sku} = req.data
-            const resp = await axios.post( 'http://localhost:5000/stock', {sku} )
-            return resp.data
+
+            if (!stockBaseURL) {
+                req.error(500, 'stockService is not configured')
+            }
+
+            try {
+                const resp = await fetchStockWithRetry(stockBaseURL, sku)
+                return resp.data
+            }
+            catch (err) {
+                req.error( 500, 'Failed to check stock: ' + err.message )
+            }
         } )
 
-        // 5. after READ: enrich response
+        //5. Action getOrderWithStock: get order and check stock for each item
+        this.on( 'getOrderWithStock', async req => {
+            const {orderID} = req.data
+            const tx = cds.transaction( req )
+
+
+            const order = await tx.run(
+                SELECT.one.from( Orders ).where( {ID: orderID} )
+            )
+            if( !order ) {
+                req.error( 404, `Order ${ orderID } not found` )
+            }
+            const items = await tx.run(
+                SELECT.from( OrderItems ).where( {parent_ID: orderID} )
+            )
+            const stockReport = []  
+            for( const it of items ) {
+                try {
+                    const resp = await fetchStockWithRetry(stockBaseURL, it.sku)
+                    stockReport.push( `Item ${ it.sku }: availableQty=${ resp.data.availableQty }` )
+                }
+                catch (err) {
+                    stockReport.push( `Item ${ it.sku }: failed to check stock` )
+                }
+            }
+            return {
+                orderID: order.ID,
+                customer: order.customer,
+                items: JSON.stringify( items ),
+                stockReport: stockReport.join( '; ' )
+            }
+        } ) 
+
+        // 6. after READ: enrich response
         this.after( 'READ', 'Orders', rows => {
             const arr = Array.isArray( rows ) ? rows : [ rows ]
             for( const o of arr )
             {
-                o.note = 'Thank you for shopping!' // field ảo runtime
+                o.note = 'Thank you for shopping!' // virtual field at runtime
             }
         } )
 
-        // 6. Lắng nghe event nội bộ (event-driven)
+        // 7. Listen to internal event (event-driven)
         this.on( 'OrderSubmitted', evt => {
             console.log( '>>> EVENT OrderSubmitted:', evt.data )
-            // tại đây có thể gửi email, update dashboard, ...
+            // Here you could send email, update dashboard, ...
         } )
+
 
         return super.init()
     }
