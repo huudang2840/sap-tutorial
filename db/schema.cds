@@ -16,3 +16,12 @@ entity OrderItems {
       qty    : Integer;
       price  : Decimal(9,2);
 }
+
+entity OrderEventLog {
+  key ID          : UUID;
+      orderId     : UUID;
+      total       : Decimal(9,2);
+      itemCount   : Integer;
+      submittedAt : Timestamp;
+      receivedAt  : Timestamp;
+}

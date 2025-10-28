@@ -1,0 +1,13 @@
+### 1. Call Action submitOrder 
+POST http://localhost:4004/odata/v4/order/submitOrder
+Content-Type: application/json
+Accept: application/json
+
+{
+  "orderID": "11111111"
+}
+
+
+### 2. Read event logs via analytics service
+GET http://localhost:4004/odata/v4/analytics/OrderEvents
+Accept: application/json
