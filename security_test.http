@@ -1,0 +1,21 @@
+### 1. Không có role Admin -> kỳ vọng 401/403
+GET http://localhost:4004/odata/v4/admin/OrdersAudit
+Accept: application/json
+
+
+### 2. Có role Admin -> kỳ vọng 200 OK
+GET http://localhost:4004/odata/v4/admin/OrdersAudit
+Accept: application/json
+Authorization: Basic YWRtaW46QWRtaW4=
+
+
+### 3. Thử ghi (POST) -> kỳ vọng bị từ chối vì @readonly
+POST http://localhost:4004/odata/v4/admin/OrdersAudit
+Accept: application/json
+Content-Type: application/json
+Authorization: Basic YWRtaW46QWRtaW4=
+
+{
+  "customer": "Should Fail",
+  "total": 999.99
+}

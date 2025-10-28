@@ -1,0 +1,39 @@
+### 1. Tạo 1 Order mới với 2 dòng OrderItems (deep insert)
+POST http://localhost:4004/odata/v4/order/Orders
+Content-Type: application/json
+
+{
+  "customer": "Khách Hàng Quốc Tế",
+  "items": [
+    {
+      "sku": "SKU-RED",
+      "name": "Red T-Shirt",        // tên mặc định (ngôn ngữ gốc, ví dụ en)
+      "qty": 2,
+      "price": 20
+    },
+    {
+      "sku": "SKU-VN",
+      "name": "Áo Thun Màu Đỏ",     // tên theo tiếng Việt
+      "qty": 1,
+      "price": 25
+    }
+  ]
+}
+
+### 2. Lấy danh sách OrderItems bình thường (không set Accept-Language)
+GET http://localhost:4004/odata/v4/order/OrderItems
+Accept: application/json
+
+### 3. Lấy danh sách OrderItems với ngôn ngữ EN (tiếng Anh / mặc định)
+GET http://localhost:4004/odata/v4/order/OrderItems
+Accept: application/json
+Accept-Language: en
+
+### 4. Lấy danh sách OrderItems với ngôn ngữ VI (tiếng Việt)
+GET http://localhost:4004/odata/v4/order/OrderItems
+Accept: application/json
+Accept-Language: vi
+
+POST http://localhost:4004/odata/v4/order/checkStock
+Content-Type: application/json
+{ "sku": "SKU-RED" }
