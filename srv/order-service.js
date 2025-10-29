@@ -29,7 +29,6 @@ class OrderService extends cds.ApplicationService {
         const stockBaseURL = stockSvcConf?.credentials?.url
 
         // Messaging channel (could be file-based-messaging / enterprise-messaging)
-        // If not configured, cds.connect.to('messaging') will throw, so wrap in try/catch
         let messaging = null
         try
         {
@@ -98,13 +97,11 @@ class OrderService extends cds.ApplicationService {
             // 2.5. Emit in-process event (analytics in same Node.js process will catch this)
             await cds.emit( 'OrderSubmitted', payload )
 
-            console.log( messaging )
-
-            // 2.6. (Optional) Emit to external messaging broker
+            // 2.6. Emit to external messaging broker
             if( messaging )
             {
                 console.log( '[order-service] Messaging', payload )
-                await messaging.emit( 'OrderSubmitted', payload )
+                await messaging.emit( 'OrderSubmitted2', payload )
             }
 
             console.log( '[order-service] Emitted OrderSubmitted for', orderID )

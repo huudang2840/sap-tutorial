@@ -3,7 +3,7 @@ const cds = require( '@sap/cds' )
 class analytics extends cds.ApplicationService {
   async init () {
 
-    // Đăng ký với in-process event bus toàn cục
+    // Register event handler for 'OrderSubmitted' events
     cds.on( 'OrderSubmitted', async payload => {
       try
       {
