@@ -1,41 +1,40 @@
-const cds = require('@sap/cds')
+const cds = require( '@sap/cds' )
 
 class analytics extends cds.ApplicationService {
-  async init() {
+  async init () {
 
-    cds.on('OrderSubmitted', async payload => {
-      try {
-        if (!payload || !payload.orderId) {
-          console.warn('[analytics] Malformed OrderSubmitted payload:', payload)
-          return
-        }
+    // Đăng ký với in-process event bus toàn cục
+    cds.on( 'OrderSubmitted', async payload => {
+      try
+      {
+        console.log( "[analytics] Received OrderSubmitted (in-process):", payload.orderId )
 
-        const { orderId, total, itemCount, submittedAt } = payload
-        const { OrderEventLog } = cds.entities
+        const {orderId, total, itemCount, submittedAt, customer} = payload
 
-        // Get connection to db, don't use cds.tx(payload) to avoid locking issues
-        const db = await cds.connect.to('db')
+        const {OrderEventLog} = cds.entities
+        const db = await cds.connect.to( 'db' )
 
-        // Recodrd log with db.run() -> autocommit, no hanging locks
         await db.run(
-          INSERT.into(OrderEventLog).entries({
-            ID         : cds.utils.uuid(),
+          INSERT.into( OrderEventLog ).entries( {
+            ID: cds.utils.uuid(),
             orderId,
             total,
             itemCount,
+            customer,
             submittedAt,
-            receivedAt : new Date().toISOString()
-          })
+            receivedAt: new Date().toISOString()
+          } )
         )
 
-        console.log('[analytics] Logged OrderSubmitted for', orderId)
-      } catch (e) {
-        console.error('[analytics] Failed to log OrderSubmitted:', e)
+        console.log( '[analytics] Logged OrderSubmitted (in-process):', orderId )
+      } catch( e )
+      {
+        console.error( '[analytics] Failed to log OrderSubmitted:', e )
       }
-    })
+    } )
 
     return super.init()
   }
 }
 
-module.exports = { analytics }
+module.exports = {analytics}

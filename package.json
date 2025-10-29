@@ -12,7 +12,8 @@
     "@cap-js/sqlite": "^2"
   },
   "scripts": {
-    "start": "cds-serve"
+    "start": "cds run",
+    "watch": "cds watch"
   },
   "private": true,
   "cds": {
@@ -37,8 +38,8 @@
         }
       },
       "messaging": {
-        "kind": "local-messaging" 
-        
+        "kind": "file-based-messaging",
+        "file": "../msg-box"
       }
     }
   }
